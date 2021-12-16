@@ -1,0 +1,32 @@
+Package: caliperR
+Type: Package
+Title: Interacct with Caliper Software from R
+Version: 1.0.0
+Author: c(
+  person("Caliper Corporation", email = "github@caliper.com", role = c("aut", "cph"))
+  )
+Maintainer: Caliper Staff <github@caliper.com>
+Description: Provides access to the Caliper API. Use this to run GISDK
+    functions including core functions like \code{OpenTable()} or
+    custom functions compiled to a user interface (\code{.dbd}).
+License: file LICENSE
+Encoding: UTF-8
+LazyData: true
+Depends:
+  RDCOMClient
+Imports:
+  R6,
+  methods,
+  data.table,
+  Hmisc,
+  stringr,
+  dplyr,
+  tidyr
+Remotes:
+  Caliper-Corporation/RDCOMClient
+RoxygenNote: 7.1.1
+Suggests: 
+    knitr,
+    rmarkdown,
+    testthat (>= 2.1.0)
+VignetteBuilder: knitr

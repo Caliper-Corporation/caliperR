@@ -1,0 +1,90 @@
+---
+title: "Working with bin files"
+author: "Caliper Staff"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Working with bin files}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(caliperR)
+dk <- connect()
+```
+
+## Intro
+
+Caliper software makes use of a number of custom file formats. Tabular data is
+routinely stored in fixed-format binary (FFB) files with extension ".bin". The
+`caliperR` package allows you to read and write these files even if you don't
+have Caliper software installed on your machine (although it is faster if you
+do).
+
+## Reading bin data
+
+The `caliperR` package comes with a sample bin file for this vignette.
+
+```{r}
+bin_file <- system.file(
+  "extdata", "gisdk", "testing", "toy_table.bin", package = "caliperR"
+)
+```
+
+Use the `read_bin()` function to bring it into R.
+
+```{r}
+df <- read_bin(bin_file)
+df
+```
+
+### Field descriptions
+
+If the bin file has field descriptions, they are preserved. They will appear
+when using `View()` in Rstudio, but can also be seen using the Hmisc package.
+
+```{r}
+# View(df)
+
+descriptions <- Hmisc::label(df)
+descriptions
+```
+
+### Field display names
+
+Lastly, the `caliperR` package can also read and return any display names that
+may be assigned to the FFB table.
+
+```{r}
+display_names <- read_bin(bin_file, returnDnames = TRUE)
+display_names
+```
+
+You can substitute display names for the field names using `colnames()`.
+
+```{r}
+df2 <- df
+colnames(df2) <- display_names
+df2
+```
+
+## Writing bin data
+
+Use the `write_bin()` function to write the data back out to a bin file. The
+`descriptions` and `display_names` arguments are optional.
+
+```{r}
+temp_bin <- tempfile(fileext = ".bin")
+write_bin(df, temp_bin, descriptions, display_names)
+```
+

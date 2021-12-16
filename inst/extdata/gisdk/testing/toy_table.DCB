@@ -1,0 +1,7 @@
+
+52
+"first",I,1,4,0,8,0,,"","first field",,"Sum","field_a"
+"second",C,5,16,0,16,0,,"","second field",,"Copy","field_b"
+"third",C,21,16,0,16,0,,"","third field",,"Copy","field_c"
+"fourth",R,37,8,0,10,2,,"","fourth field",,"Sum","field_d"
+"fifth",R,45,8,0,10,2,,"","fifth field",,"Sum","field_e"

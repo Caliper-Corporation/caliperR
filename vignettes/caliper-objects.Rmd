@@ -1,0 +1,67 @@
+---
+title: "Caliper objects"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Caliper objects}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(caliperR)
+dk <- connect()
+```
+
+## Intro
+
+The Caliper scripting language (GISDK) contains numerous objects which
+facilitate the analysis of transport problems. This vignette explains how to
+work with these objects from R using the `caliperR` package. If you are not
+already familiar with the basics of this package, see
+`vignette("using-caliperR")`.
+
+## Getting started
+
+In TransCAD, the `NLM.Model` object facilitates the creation and application of
+logistic regression models. To use this object from R, we create it like so:
+
+```{r}
+object <- CreateObject("NLM.Model")
+```
+
+This creates both the GISDK object and an R object (R6 class) that points to it.
+From here, the only difference between R and GISDK is syntax: R uses `$` instead
+of `.` to access object attributes and methods. The code below sets the `Label`
+attribute of the `NLM.Model` GISDK object.
+
+```{r}
+object$Label <- "A logit model"
+object$Label
+```
+
+Next, the `Clear()` method of the `NLM.Model` object is called, which removes
+the value of all fields including `Label`.
+
+```{r}
+object$Clear()
+object$Label
+```
+
+To see the complete list of available fields and methods for the GISDK object,
+simply use `object$info`.
+
+```{r}
+info <- object$info
+head(info$FieldNames)
+head(info$MethodNames)
+```
+

@@ -1,0 +1,169 @@
+---
+title: "Caliper matrices"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_vignette:
+    toc: true
+vignette: >
+  %\VignetteIndexEntry{Caliper matrices}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(caliperR)
+dk <- connect()
+```
+
+## Intro
+
+This vignette explains how to work with Caliper matrices from R using the
+`caliperR` package. Many of the relevant GISDK functions have been streamlined
+using the `CaliperMatrix` R6 class and concepts such as matrix "handles" and
+"currencies" are resolved behind the scenes. The end result is a more intuitive
+experience.
+
+This vignette assumes you are already familiar with the basics of the `caliperR`
+package. If not, see `vignette("using-caliperR")`.
+
+Before getting started, I create a temporary copy of this package's matrix file. 
+This is only to ensure that changes made by this vignette are not made to the
+original file (and is not necessary in normal workflow).
+
+```{r}
+orig <- system.file("extdata", "gisdk", "testing", "toy_matrix.mtx", package = "caliperR")
+mtx_file <- tempfile(fileext = ".mtx")
+ok <- file.copy(orig, mtx_file)
+```
+
+## Getting started
+
+Opening a matrix returns a `CaliperMatrix` object with useful attributes and
+methods.
+
+```{r}
+mtx <- dk$OpenMatrix(mtx_file, NA)
+```
+
+Several of R's generic functions can be used on the resulting object.
+
+```{r}
+summary(mtx)
+```
+
+```{r}
+head(as.data.frame(mtx))
+```
+
+The function `as.matrix()` can be used on a specific core, or on the matrix object
+directly to convert all cores.
+
+```{r}
+as.matrix(mtx$core_b)
+as.matrix(mtx)
+```
+
+You can also send updated data back to the Caliper matrix. In the code below,
+I update the top left corner of `core_b`. Doing so updates the .mtx file.
+
+```{r}
+new_data <- matrix(seq(1, 4), nrow = 2, ncol = 2, 
+                   dimnames = list(c(1,2), c(1,2)))
+new_data
+mtx$core_b <- new_data
+as.matrix(mtx$core_b)
+```
+
+### Full work flow example
+
+The example below introduces one more function: `CreateCore()`. Using it, we
+create a new core (`core_c`) and fill it with the sum of `core_a` and `core_b`.
+
+```{r}
+mtx$CreateCore("core_c")
+data <- as.matrix(mtx)
+data$core_c <- data$core_a + data$core_b
+mtx$core_c <- data$core_c
+as.matrix(mtx$core_c)
+```
+
+## Working with indices
+
+Row and column indices are how you subset Caliper matrices. In the previous
+section, we were able to update a subset of matrix cells directly
+from R without needing to know about matrix indices; however, knowledge of
+indices is valuable when working with more complex GISDK functions.
+
+You can list the indices availabe in the matrix:
+
+```{r}
+mtx$indices
+```
+
+The "all" index contains all rows and columns 1-5. The "subset" index is only
+1-3.
+
+The `row_index` and `column_index` active fields allow you to see which index is
+active or switch between available indices. First, check the currently-active
+row index:
+
+```{r}
+mtx$row_index
+```
+
+The "all" row index is active, which means all 5 rows. Change it to the "subset"
+index to only work with the first 3.
+
+```{r}
+mtx$row_index <- "subset"
+as.matrix(mtx$core_b)
+```
+
+We can do the same to the column index, which gives us a 3x3 matrix.
+
+```{r}
+mtx$column_index <- "subset"
+as.matrix(mtx$core_b)
+```
+
+Finally, the `caliperR` package makes it simple to add new indices. The example
+below creates an index named "new" and gives the IDs of the rows/columns to
+include.
+
+```{r}
+mtx$CreateIndex("new", c(1, 2, 3, 4))
+mtx$indices
+```
+
+## Handles and currencies
+
+Note that none of the examples above required that you know what a matrix handle
+or currency is The `caliperR` package handles this behind the scenes, but some
+GISDK functions require handles or currencies as arguments.
+
+If a function requires the matrix handle, simply pass in the entire matrix
+object. `caliperR` will understand what you mean.
+
+```{r}
+# A GISDK function requiring a matrix handle
+dk$GetMatrixBaseIndex(mtx)
+```
+
+The function `GetMatrixColumnLabels()` requires a matrix currency. Simply
+reference the core by name and `caliperR` handles the rest. Note that the
+column labels are only 1-3 as opposed to 1-5. The `subset` column index we set
+is respected.
+
+```{r}
+# A GISDK function requiring a matrix currency
+dk$GetMatrixColumnLabels(mtx$core_a)
+```

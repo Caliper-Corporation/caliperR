@@ -1,0 +1,249 @@
+---
+title: "Using caliperR"
+author: "Caliper Staff"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_vignette:
+    toc: true
+vignette: >
+  %\VignetteIndexEntry{Using caliperR}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+## Introduction
+
+`caliperR` makes it easy to work with Caliper software from R. Supported
+software includes:
+
+  * [TransCAD](https://www.caliper.com/tcovu.htm)
+  * [TransModeler](https://www.caliper.com/transmodeler/default.htm)
+  * [Maptitude](https://www.caliper.com/maptovu.htm)
+
+The sections below show how to work with the package.
+
+## Connecting
+
+Connecting to Caliper software is accomplished by calling the `connect()`
+function. This will display a helpful message detailing which software package
+was connected to R. It also returns a helpful object that we will use later.
+
+```{r}
+library(caliperR)
+dk <- connect()
+```
+
+If you have multiple software applications installed, you can use `connect()` to
+specify which you want to connect to.
+
+```{r, eval=FALSE}
+dk <- connect("Maptitude")
+```
+
+The only part of connecting that can be tricky is if you have multiple versions
+of the same software installed (e.g. TransCAD 8 and TransCAD 9). By default,
+`caliperR` selects the last one installed. To connect to a different version,
+you must open that application before connecting. This can be done from R (but
+manual works, too):
+
+```{r, eval=FALSE}
+system2(
+  "C:\\Program Files\\TransCAD 9.0\\tcw.exe",
+  wait = FALSE, invisible = FALSE
+)
+dk <- connect()
+```
+
+To disconnect (and close the software), use:
+
+```{r, eval=FALSE}
+disconnect()
+```
+
+## Macros and Functions
+
+Caliper software comes with a scripting language called GISDK. Users write custom
+macros in this language for various applications, but it also comes with a large
+number of built-in functions.
+
+### Running a macro
+
+Running a GISDK macro that you or someone else has written in easy and looks
+just like it would in GISDK.
+
+```{r}
+RunMacro("G30 Tutorial Folder")
+```
+
+### Running a function
+
+To access the library of native GISDK functions, use the `dk` object returned by
+`connect()`.
+
+```{r}
+folder <- RunMacro("G30 Tutorial Folder")
+view <- dk$OpenTable("airports", "ffb", list(paste0(folder, "\\airports.bin")))
+num_rows <- dk$GetRecordCount(view, NA)
+paste0("The table '", view, "' has ", num_rows, " rows.")
+
+# Equivalent in GISDK
+# view = OpenTable("airports", "ffb", {folder + "airports.bin", null}, )
+# num_rows = GetRecordCount(view, )
+# ShowMessage("The table '" + view + "' has " + String(num_rows) + " rows.")
+```
+
+The code above introduces two other important differences between R and GISDK:
+
+  * Use a `list` in R when you would use an `array` in GISDK.
+  * Use `NA` in R when you would use `null` in GISDK.
+
+To improve integration with R, select GISDK functions have been implemented
+directly in the `caliperR` package:
+
+  * `RunMacro()`
+  * `SetAlternateInterface()`
+  * `GetInterface()`
+  * `CreateObject()`
+
+These functions behave the same whether called directly or using the `dk`
+object.
+
+```{r, error=TRUE}
+GetInterface()
+dk$GetInterface()
+```
+
+## Custom Macros
+
+In order to call one of your own GISDK functions from R, it must be compiled.
+The `caliperR` package comes with the utility function `compile_gisdk()` to make
+this easy and a toy script to test it on. Code compiled using Caliper software
+also works.
+
+```{r}
+toy_script <- system.file("extdata", "gisdk", "testing", "gisdk.rsc", package = "caliperR")
+ui_path <- compile_gisdk(toy_script, tempfile(fileext = ".dbd"))
+```
+
+The toy functions are simple, but illustrate some important points in the
+examples below.
+
+To reference a custom function that you have written and compiled, first use 
+`SetAlternateInterface()` to point to your compiled code. The "first macro"
+example in the compiled toy script simply returns a "Hello World!" message.
+
+```{r}
+SetAlternateInterface(ui_path)
+RunMacro("first macro")
+```
+
+You can always check the current interface using
+
+```{r}
+GetInterface()
+```
+
+and set it back to the default interface with
+
+```{r}
+SetAlternateInterface()
+GetInterface()
+```
+
+## Named Arrays
+
+Many GISDK functions and macros take named arrays (aka options arrays) as input.
+`caliperR` allows you to pass named lists as an equivalent.
+
+```{r}
+SetAlternateInterface(ui_path)
+
+opts <- list()
+opts$one <- 1
+opts$two <- 2
+RunMacro("parse opts array", opts)
+```
+
+## Views in R
+
+Caliper software represents tabular data in "views". An earlier example
+explained how to use `dk$OpenTable()` to open a view and get the number of rows
+using GISDK functions. It can also be helpful to bring that tabular data into R
+for additional processing. Two functions exist to help with this:
+
+  * `df_from_view()`: convert a Caliper view into an R data frame
+  * `df_to_view()`: convert a data frame into a Caliper view (or update an
+    existing view)
+
+In the code below, a data.frame is sent to a view. A new view is created, and
+it's name is returned.
+  
+```{r}
+SetAlternateInterface() # reset to default
+df <- data.frame("one" = c(1, 2), "two" = c(3, 4), "three" = c(5, 6))
+df
+view <- df_to_view(df)
+view
+```
+  
+GISDK functions will now operate on that view as seen in previous examples.
+
+```{r}
+dk$GetRecordCount(view, NA)
+```
+
+The view can be brought back into a new data.frame.
+
+```{r}
+df2 <- df_from_view(view)
+df2
+```
+
+Finally, the view can be updated with new data. To do so, we include the name
+of the view we want to update in our call to `df_to_view()`.
+
+```{r}
+df2$one <- 10
+view <- df_to_view(df2, view)
+df_from_view(view)
+```
+
+## Logging and Message Boxes
+
+The behavior of message boxes (errors or otherwise), depends on how Caliper
+software is being run from R. Most often, the software is running in the
+background (there is no icon on the task bar and no associated window). In this
+case, messages are written out to a log file. In the code below, I first write
+something to the log and then use `read_log()` to display it.
+
+```{r, eval=FALSE}
+dk$ShowMessage("This is a test.")
+read_log()
+```
+
+If a Caliper program is already open when you connect to it, then it will have a
+visible window and show up on the task bar. In this case, `ShowMessage` and
+related functions will create a window with an OK button. R will wait until you
+have closed that pop up before continuing. You can test the behavior by running
+the code below. You may have to alt-tab to find the pop up window.
+
+```{r, eval=FALSE}
+dk$ShowArray(list(1, 2, 3))
+```
+
+## Advanced topics
+
+For advanced topics, see the other package vignettes:
+
+  * [Matrices](caliper-matrices.html)
+  * [Objects](caliper-objects.html)
+  * [Bin Files](bin-files.html)
