@@ -6,8 +6,8 @@ Use Caliper software from R
 
 ```r
 if (!require("devtools")) install.packages("devtools")
-install.packages("RDCOMClient", repos = "http://www.omegahat.net/R", type = "win.binary")
-devtools::install_github('Caliper-Corporation/caliperR')
+devtools::install_github("https://github.com/Caliper-Corporation/RDCOMClient")
+devtools::install_github("https://github.com/Caliper-Corporation/caliperR", build_vignettes = TRUE)
 ```
 
 ## Getting Started
