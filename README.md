@@ -22,4 +22,7 @@ For more details, see:
 
 ```r
 vignette("using-caliperR")
+
+# To list all package vignettes:
+# vignette(package = "caliperR")
 ```
